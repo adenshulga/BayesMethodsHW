@@ -12,6 +12,14 @@ from utils.DatasetInfo import DatasetInfo
 
 
 class Metrics:
+    '''
+    Class handles: 
+    - metric evaluation(AUC, NUM, ASY)
+    - plotting ROC
+    - plotting metric thresholding dependence
+    - redifined __str__ method to obtain all metrics
+    - >, < operators, if one model is worse by all metrics than other, returns True
+    '''
 
     P = np.array([[0,1], [1, 0]])
     P1 = np.array([[-9, 9], [1, 0]])

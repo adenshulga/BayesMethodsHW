@@ -14,6 +14,9 @@ class DatasetInfo:
     - train, test split
     - X_train, X_test 
     - scaling of features
+    - computing svd
+    - plotting singular values
+    - representation with redifined __str__ method
 
     '''
 

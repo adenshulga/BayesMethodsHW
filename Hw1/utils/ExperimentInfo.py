@@ -7,10 +7,14 @@ from utils.DatasetInfo import DatasetInfo
 
 class ExperimentInfo:
     '''
-    - dataset number
-    - models without worst
-    - best model for each metric
-    - list with dropped models
+    Class represents info about experiment(evaluating multiple models on dataset)
+    Here's supported actions:
+    - fitting multiple models
+    - evaluating multiple models
+    - drop "bad" models method, which drops model if exists better by all metrics model
+    - redifined __str__ method, to print experiment info
+    - best_model method, which saves best model for each metric
+    - save best model method, which saves experiment info in format required by  
     
     '''
 
@@ -44,13 +48,15 @@ class ExperimentInfo:
         models_to_remove = []
 
         for model_name, model_data in self.models.items():
-            is_bad = True
+            # is_bad = True
+            is_bad = False
+
 
             # Check if the current model is less than every other model
             for other_name, other_data in self.models.items():
                 if model_name != other_name: # Do not compare with itself
-                    if not (model_data['train'] < other_data['train'] and model_data['test'] < other_data['test']):
-                        is_bad = False
+                    if (model_data['test'] < other_data['test']):
+                        is_bad = True
                         break
 
             # If it is less than all other models, add to bad models and mark for removal
@@ -121,15 +127,12 @@ class ExperimentInfo:
             'NUM': best_num_model,
             'ASY1': best_asy1_model,
             'ASY2': best_asy2_model
-        }
-    
+        }      
+
     def save_best_model(self):
         tmp_dict = {}
-        for metric in ['AUC', 'NUM', 'ASY1', 'ASY2']:
-            tmp_dict[metric] = self.models[self.best_models[metric]]['model'].predict()
+        for metric in ['NUM', 'ASY1', 'ASY2']:
+            tmp_dict[metric] = self.models[self.best_models[metric]]['model'].predict(self.dataset.X_predict)
+        tmp_dict['AUC'] = self.models[self.best_models[metric]]['model'].predict_proba(self.dataset.X_predict)[:, 1]
         df = pd.DataFrame(tmp_dict)
-
-        df.to_csv(f'results/task1_{self.dataset.num_of_dataset}_ans.csv', index=False, header=False)
-        
-
-    
+        df.to_csv(f'results/task1_{self.dataset.num_of_dataset}_ans.csv', index=False)
