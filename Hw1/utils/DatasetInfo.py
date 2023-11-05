@@ -4,7 +4,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+from imblearn.over_sampling import SMOTE, ADASYN
+
+from typing import Literal
+
 import matplotlib.pyplot as plt
+
 
 class DatasetInfo:
     '''
@@ -35,7 +40,12 @@ class DatasetInfo:
     def train_test_split(self) -> None:
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=self.test_size, stratify=self.y)
 
-    def __init__(self, num_of_dataset: int) -> None:
+        self.dataset_info += (
+            f'Positive class ration in train: {np.mean(self.y_train)}\n'
+            f'Positive class ration in test: {np.mean(self.y_test)}\n'
+        )
+
+    def __init__(self, num_of_dataset: int, split_ratio: float=0.2) -> None:
         '''
 
         '''
@@ -46,7 +56,7 @@ class DatasetInfo:
         self.num_of_features = self.X_initial.shape[1]
 
         self.experiments_info = {}
-        self.test_size = 0.2
+        self.test_size = split_ratio
 
         self.class_balance = np.mean(self.y)
 
@@ -56,13 +66,29 @@ class DatasetInfo:
             f'Train/test split ratio {1 - self.test_size}/{self.test_size}\n'
             f'Positive class ratio: {self.class_balance}\n'
         )
-        print(self)
 
         self.pca = None
+        self.is_sampled = None
 
         self.preprocess_dataset()
         self.train_test_split()
         self.compute_PCA()
+
+        print(self)
+
+    def sample_train(self, type: Literal['SMOTE', 'ADASYN'], seed=42) -> None:
+        if self.is_sampled:
+            self.X_train = self.X_tmp
+            self.y_train = self.y_tmp
+        sampling_obj = {'SMOTE' : SMOTE, 'ADASYN' : ADASYN}
+        sampler = sampling_obj[type](random_state = seed)
+        self.X_tmp = self.X_train
+        self.y_tmp = self.y_train
+        self.is_sampled = type
+        self.X_train, self.y_train = sampler.fit_resample(self.X_train, self.y_train)
+        self.dataset_info += (
+            f'Resampling by {type}, positive class ratio in train now: {np.mean(self.y_train)}\n'
+        )
 
 
     def __str__(self) -> str:
@@ -79,6 +105,9 @@ class DatasetInfo:
     def compute_PCA(self):
         self.pca = PCA()
         self.pca.fit(self.X_train)
+
+    def crop_data_by_PCA(self):
+        pass
 
     def plot_singular_values(self, figsize=(10,8)):
         if self.pca is None:

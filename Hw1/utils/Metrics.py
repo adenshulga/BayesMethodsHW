@@ -8,13 +8,18 @@ from sklearn.metrics import confusion_matrix
 
 import matplotlib.pyplot as plt
 
+import utils.DatasetInfo
+
+from importlib import reload
+
+reload(utils.DatasetInfo)
 from utils.DatasetInfo import DatasetInfo
 
 
 class Metrics:
     '''
     Class handles: 
-    - metric evaluation(AUC, NUM, ASY)
+    - metric evaluation(AUC, NUM, ASY) for given threshold
     - plotting ROC
     - plotting metric thresholding dependence
     - redifined __str__ method to obtain all metrics
@@ -29,6 +34,7 @@ class Metrics:
         self.fpr, self.tpr, self.thresholds = roc_curve(self.y_gt, self.y_pred_prob[:, 1])
         # Filter the values where thresholds are between 0 and 1
         valid_indices = np.where((self.thresholds >= 0) & (self.thresholds <= 1))
+        # valid_indices = valid_indices[~np.isnan(valid_indices)]
         self.fpr = self.fpr[valid_indices]
         self.tpr = self.tpr[valid_indices]
         self.thresholds = self.thresholds[valid_indices]
@@ -39,14 +45,17 @@ class Metrics:
             return np.mean(~(self.y_pred == self.y_gt))
         else:
             y_pred = np.where(self.y_pred_prob[:, 1] > threshold, 1, 0)
-            return np.mean(~(y_pred == self.y_gt))
+            # return np.mean(~(y_pred == self.y_gt))
+            return np.sum(~(y_pred == self.y_gt))
 
     def ASY(self, P, threshold: float=None) -> float:
         if threshold is None:
             return np.sum(P*confusion_matrix(self.y_gt, self.y_pred))/self.y_gt.shape[0]
         else:
             y_pred = np.where(self.y_pred_prob[:, 1] > threshold, 1, 0)
-            return np.sum(P * confusion_matrix(self.y_gt, y_pred)) / self.y_gt.shape[0]
+            # return np.sum(P * confusion_matrix(self.y_gt, y_pred)) / self.y_gt.shape[0]
+            return np.sum(P * confusion_matrix(self.y_gt, y_pred))
+
     
     def plot_ROC(self, figsize=(10, 8)) -> None:
         plt.figure(figsize=figsize)
@@ -122,9 +131,34 @@ class Metrics:
         self.model_description = model_description
 
         self.AUC()
-        self.num = self.NUM()
-        self.asy1 = self.ASY(Metrics.P1)
-        self.asy2 = self.ASY(Metrics.P2)
+        # self.num = self.NUM()
+        # self.asy1 = self.ASY(Metrics.P1)
+        # self.asy2 = self.ASY(Metrics.P2)
+        self.get_best_thresholds()
+
+    # TODO: write this in better way
+    def get_best_thresholds(self):
+
+        num_scores = []
+        asy1_scores = []
+        asy2_scores = []
+        for thr in self.thresholds:
+            num_scores.append(self.NUM(thr))
+            asy1_scores.append(self.ASY(Metrics.P1, thr))
+            asy2_scores.append(self.ASY(Metrics.P2, thr))
+
+        num_scores = np.array(num_scores)
+        asy1_scores = np.array(asy1_scores)
+        asy2_scores = np.array(asy2_scores)
+
+        self.num = num_scores.min()
+        self.num_thr = self.thresholds[num_scores.argmin()]
+
+        self.asy1 = asy1_scores.min()
+        self.asy1_thr = self.thresholds[asy1_scores.argmin()]
+
+        self.asy2 = asy2_scores.min()
+        self.asy2_thr = self.thresholds[asy2_scores.argmin()]
 
 
     def __str__(self) -> str:
